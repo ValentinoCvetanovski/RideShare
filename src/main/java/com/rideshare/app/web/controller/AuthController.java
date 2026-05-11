@@ -1,7 +1,7 @@
-package com.rideshare.app.controller;
+package com.rideshare.app.web.controller;
 
-import com.rideshare.app.dto.LoginRequest;
-import com.rideshare.app.dto.SignupRequest;
+import com.rideshare.app.web.dto.LoginRequest;
+import com.rideshare.app.web.dto.SignupRequest;
 import com.rideshare.app.model.User;
 import com.rideshare.app.service.AuthService;
 import lombok.RequiredArgsConstructor;

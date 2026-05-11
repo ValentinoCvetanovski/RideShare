@@ -1,4 +1,4 @@
-package com.rideshare.app.dto;
+package com.rideshare.app.web.dto;
 
 import lombok.Data;
 

@@ -1,9 +1,11 @@
-package com.rideshare.app.controller;
+package com.rideshare.app.web.controller;
 
 import com.rideshare.app.model.Ride;
 import com.rideshare.app.service.RideService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -18,10 +20,16 @@ public class RideController {
     public List<Ride> getAllRides() {
         return rideService.getAllRides();
     }
+
     @PostMapping
-    public Ride createRide(@RequestBody Ride ride){
-        return rideService.createRide(ride);
+    public Ride createRide(@RequestBody Ride ride) {
+        try {
+            return rideService.createRide(ride);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
     }
+
     @GetMapping("/search")
     public List<Ride> search(
             @RequestParam String fromCity,

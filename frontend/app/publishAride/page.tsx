@@ -20,6 +20,7 @@ const ZoomControl = dynamic(() => import('react-leaflet').then((mod) => mod.Zoom
 
 type User = {
     fullName?: string;
+    email?: string;
     avatar?: string;
 };
 
@@ -250,8 +251,15 @@ export default function PublishRide() {
             return;
         }
 
-        if (!routeAvailable || routePath.length < 2) {
-            alert('No drivable route between selected points. Choose different start/destination.');
+        const isFreshRoute =
+            routePath.length > 1 &&
+            Math.abs(routePath[0][0] - fromCoords[0]) < 0.05 &&
+            Math.abs(routePath[0][1] - fromCoords[1]) < 0.05 &&
+            Math.abs(routePath[routePath.length - 1][0] - toCoords[0]) < 0.05 &&
+            Math.abs(routePath[routePath.length - 1][1] - toCoords[1]) < 0.05;
+
+        if (!routeAvailable || !isFreshRoute) {
+            alert('No drivable land route found between selected points.');
             return;
         }
 
@@ -278,6 +286,7 @@ export default function PublishRide() {
                     seats: seatCount,
                     price: Number(price),
                     driverName: user.fullName,
+                    driverEmail: user.email,
                     driverAvatar: user.avatar || '',
                     carModel: 'N/A',
                 }),
@@ -374,6 +383,8 @@ export default function PublishRide() {
                                                         <div
                                                             key={`${city.name}-${idx}`}
                                                             onClick={() => {
+                                                                setRouteAvailable(false);
+                                                                setRoutePath([]);
                                                                 setSelectedFrom(city);
                                                                 setManualFrom(city.coords);
                                                                 setFromQuery(city.name);
@@ -411,6 +422,8 @@ export default function PublishRide() {
                                                         <div
                                                             key={`${city.name}-${idx}`}
                                                             onClick={() => {
+                                                                setRouteAvailable(false);
+                                                                setRoutePath([]);
                                                                 setSelectedTo(city);
                                                                 setManualTo(city.coords);
                                                                 setToQuery(city.name);
@@ -516,6 +529,13 @@ export default function PublishRide() {
                                     {isLoading ? <Icon icon="solar:spinner-linear" className="animate-spin" /> : 'Publish Ride'}
                                     {!isLoading && <Icon icon="solar:arrow-right-linear" />}
                                 </button>
+
+                                {!routeAvailable && fromCoords && toCoords && (
+                                    <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm px-4 py-3 flex items-start gap-2">
+                                        <Icon icon="solar:danger-triangle-linear" className="text-base mt-[1px]" />
+                                        <span>No drivable land route found between selected points. Publish is disabled.</span>
+                                    </div>
+                                )}
                             </form>
                         </div>
 

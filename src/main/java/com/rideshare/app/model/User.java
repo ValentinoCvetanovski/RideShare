@@ -8,6 +8,7 @@ import lombok.Data;
 @Data
 @Table(name = "users")
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -15,12 +16,13 @@ public class User {
     private String fullName;
     private String phone;
 
-    @Column(unique = true,nullable = false)
+    @Column(columnDefinition = "TEXT")
+    private String avatar;
+
+    @Column(unique = true, nullable = false)
     private String email;
 
     @Column(nullable = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
-
-
 }
