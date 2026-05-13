@@ -4,6 +4,7 @@ import com.rideshare.app.model.Ride;
 import com.rideshare.app.service.RideService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -50,4 +51,23 @@ public class RideController {
         }
         return rideService.searchRidesByDateAndSeats(fromCity, fromCountry, toCity, toCountry, date, seats);
     }
+    @GetMapping("/active")
+    public List<Ride> getActiveRides() {
+        return rideService.getActiveRides();
+    }
+    @DeleteMapping("/expired")
+    public String deleteExpired() {
+        int deleted = rideService.deleteExpiredRides();
+        return "Deleted expired rides: " + deleted;
+    }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteRide(@PathVariable Long id) {
+        rideService.deleteRideById(id);
+    }
+    @GetMapping("/{id}")
+    public Ride getRideById(@PathVariable Long id) {
+        return rideService.getRideById(id);
+    }
+
 }

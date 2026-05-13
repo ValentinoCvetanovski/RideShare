@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AppHeader from '../components/AppHeader';
 import AppFooter from '../components/AppFooter';
+import { useRouter } from 'next/navigation';
+
 
 type Ride = {
     id: number;
@@ -27,6 +29,7 @@ type Ride = {
 type User = {
     fullName?: string;
     avatar?: string;
+    role?: string;
 };
 
 export default function FindARide() {
@@ -46,10 +49,34 @@ export default function FindARide() {
     const [passengers, setPassengers] = useState(1);
 
     const searchParams = useSearchParams();
+
+    const router = useRouter();
+
     const refresh = searchParams.get('refresh');
 
     const currentUser: User | null =
         typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null;
+    const isAdmin = currentUser?.role === 'ADMIN';
+
+    const handleDeleteRide = async (rideId: number) => {
+        const confirmed = confirm('Are you sure you want to delete this ride?');
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/rides/${rideId}`, {
+                method: 'DELETE',
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Delete failed');
+            }
+
+            setRides((prev) => prev.filter((r) => r.id !== rideId));
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to delete ride');
+        }
+    };
 
     const resolveAvatar = (ride: Ride) => {
         if (ride.driverAvatar) return ride.driverAvatar;
@@ -58,7 +85,7 @@ export default function FindARide() {
     };
 
     useEffect(() => {
-        fetch('http://localhost:8080/api/rides', { cache: 'no-store' })
+        fetch('http://localhost:8080/api/rides/active', { cache: 'no-store' })
             .then((res) => res.json())
             .then((data) => setRides(data || []))
             .catch((err) => console.error(err));
@@ -75,7 +102,7 @@ export default function FindARide() {
 
         const url = params.toString()
             ? `http://localhost:8080/api/rides/search?${params.toString()}`
-            : `http://localhost:8080/api/rides`;
+            : `http://localhost:8080/api/rides/active`;
 
         try {
             const res = await fetch(url, { cache: 'no-store' });
@@ -128,50 +155,50 @@ export default function FindARide() {
     return (
         <div className="bg-gray-50 text-gray-900 font-sans antialiased selection:bg-brand-500 selection:text-white flex flex-col min-h-screen">
             <style jsx global>{`
-        input[type='range'] {
-          -webkit-appearance: none;
-          width: 100%;
-          background: transparent;
-        }
-        input[type='range']::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          height: 20px;
-          width: 20px;
-          border-radius: 50%;
-          background: #ffffff;
-          cursor: pointer;
-          margin-top: -8px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
-          border: 1px solid #f3f4f6;
-          transition: transform 0.1s;
-        }
-        input[type='range']::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-        }
-        input[type='range']::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 4px;
-          cursor: pointer;
-          background: #e5e7eb;
-          border-radius: 999px;
-        }
-        input[type='range']:focus {
-          outline: none;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e5e7eb;
-          border-radius: 4px;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-        }
-      `}</style>
+                input[type='range'] {
+                    -webkit-appearance: none;
+                    width: 100%;
+                    background: transparent;
+                }
+                input[type='range']::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    cursor: pointer;
+                    margin-top: -8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.05);
+                    border: 1px solid #f3f4f6;
+                    transition: transform 0.1s;
+                }
+                input[type='range']::-webkit-slider-thumb:hover {
+                    transform: scale(1.1);
+                }
+                input[type='range']::-webkit-slider-runnable-track {
+                    width: 100%;
+                    height: 4px;
+                    cursor: pointer;
+                    background: #e5e7eb;
+                    border-radius: 999px;
+                }
+                input[type='range']:focus {
+                    outline: none;
+                }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e5e7eb;
+                    border-radius: 4px;
+                }
+                .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+                    background: #d1d5db;
+                }
+            `}</style>
 
             <AppHeader />
 
@@ -376,11 +403,24 @@ export default function FindARide() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:border-l sm:border-gray-100 sm:pl-6 min-w-[100px]">
+                                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:border-l sm:border-gray-100 sm:pl-6 min-w-[100px] gap-2">
                                         <div className="text-2xl font-medium tracking-tight text-gray-900">{ride.price} den</div>
-                                        <button className="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium transition-colors hover:bg-gray-800 outline-none w-full sm:w-auto text-center">
+
+                                        <button
+                                            onClick={() => router.push(`/book?id=${ride.id}`)}
+                                            className="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium transition-colors hover:bg-gray-800 outline-none w-full sm:w-auto text-center">
                                             Book
                                         </button>
+
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteRide(ride.id)}
+                                                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 outline-none w-full sm:w-auto text-center"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))

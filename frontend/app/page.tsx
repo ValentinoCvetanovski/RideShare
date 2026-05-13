@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import AppHeader from '../app/components/AppHeader';
 import AppFooter from './components/AppFooter';
+import { useRouter } from 'next/navigation';
 
 type Ride = {
   id: number;
@@ -41,7 +42,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/rides', { cache: 'no-store' })
+    fetch('http://localhost:8080/api/rides/active', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data: Ride[]) => {
           const sorted = [...(data || [])].sort((a, b) => b.id - a.id);
@@ -55,6 +56,7 @@ export default function Home() {
     setIsSearching(true);
     setTimeout(() => setIsSearching(false), 800);
   };
+  const router = useRouter();
 
   const ridesToShow = useMemo(() => latestRides.slice(0, 3), [latestRides]);
 
@@ -234,7 +236,9 @@ export default function Home() {
                             </div>
                           </div>
 
-                          <button className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-900 text-sm font-medium transition-colors border border-gray-200/50">
+                          <button
+                              onClick={() => router.push(`/book?id=${ride.id}`)}
+                              className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-900 text-sm font-medium transition-colors border border-gray-200/50">
                             Book
                           </button>
                         </div>

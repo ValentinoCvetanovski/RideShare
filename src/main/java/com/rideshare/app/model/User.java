@@ -19,6 +19,9 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String avatar;
 
+    @Column(nullable = false)
+    private String role = "USER";
+
     @Column(unique = true, nullable = false)
     private String email;
 

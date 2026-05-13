@@ -6,6 +6,8 @@ import com.rideshare.app.repository.RideRepository;
 import com.rideshare.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -89,4 +91,40 @@ public class RideService {
         return rideRepository.findByFromCityAndFromCountryAndToCityAndToCountryAndDateAndSeatsGreaterThanEqual(
                 fromCity, fromCountry, toCity, toCountry, date, seats);
     }
+    public List<Ride> getActiveRides() {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        return rideRepository.findAll().stream()
+                .filter(r ->
+                        r.getDate().isAfter(today) ||
+                                (r.getDate().isEqual(today) && !r.getDepTime().isBefore(now))
+                )
+                .toList();
+    }
+
+    public int deleteExpiredRides() {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        List<Ride> expired = rideRepository.findAll().stream()
+                .filter(r ->
+                        r.getDate().isBefore(today) ||
+                                (r.getDate().isEqual(today) && r.getDepTime().isBefore(now))
+                )
+                .toList();
+
+        rideRepository.deleteAll(expired);
+        return expired.size();
+    }
+    public void deleteRideById(Long id) {
+        if (!rideRepository.existsById(id)) {
+            throw new RuntimeException("Ride not found");
+        }
+        rideRepository.deleteById(id);
+    }
+    public Ride getRideById(Long id) {
+        return rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+    }
+
 }
