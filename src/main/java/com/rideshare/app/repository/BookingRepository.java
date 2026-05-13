@@ -3,5 +3,10 @@ package com.rideshare.app.repository;
 import com.rideshare.app.model.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BookingRepository extends JpaRepository<Booking, Long> {}
+import java.util.List;
+
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+    List<Booking> findByPassengerIdOrderByIdDesc(Long passengerId);
+
+}
 

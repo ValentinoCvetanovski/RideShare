@@ -6,6 +6,8 @@ import com.rideshare.app.web.dto.CreateBookingRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
@@ -17,5 +19,15 @@ public class BookingController {
     public Booking create(@RequestBody CreateBookingRequest req) {
         return bookingService.create(req);
     }
+    @GetMapping("/my/{passengerId}")
+    public List<Booking> myBookings(@PathVariable Long passengerId) {
+        return bookingService.getMyBookings(passengerId);
+    }
+    @DeleteMapping("/{bookingId}")
+    public void cancel(@PathVariable Long bookingId)
+    {
+        bookingService.cancelBooking(bookingId);
+    }
+
 }
 

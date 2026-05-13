@@ -26,11 +26,27 @@ type User = {
   avatar?: string;
 };
 
+type CitySuggestion = {
+  name: string;
+  country?: string;
+};
+
 export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [minDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [latestRides, setLatestRides] = useState<Ride[]>([]);
+
+  const [fromCity, setFromCity] = useState('');
+  const [toCity, setToCity] = useState('');
+  const [passengers, setPassengers] = useState(1);
+
+  const [fromSuggestions, setFromSuggestions] = useState<CitySuggestion[]>([]);
+  const [toSuggestions, setToSuggestions] = useState<CitySuggestion[]>([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
+
+  const router = useRouter();
 
   const currentUser: User | null =
       typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || 'null') : null;
@@ -40,6 +56,47 @@ export default function Home() {
     if (currentUser?.fullName === ride.driverName && currentUser?.avatar) return currentUser.avatar;
     return `https://i.pravatar.cc/150?u=${ride.driverName || ride.id}`;
   };
+
+  const fetchCitySuggestions = async (query: string): Promise<CitySuggestion[]> => {
+    if (!query.trim() || query.trim().length < 2) return [];
+    try {
+      const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q=${encodeURIComponent(
+              query
+          )}`
+      );
+      const data = await res.json();
+      return (data || []).map((item: any) => ({
+        name:
+            item.address?.city ||
+            item.address?.town ||
+            item.address?.village ||
+            item.display_name?.split(',')?.[0] ||
+            'Unknown',
+        country: item.address?.country || '',
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (showFromSuggestions) {
+        setFromSuggestions(await fetchCitySuggestions(fromCity));
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [fromCity, showFromSuggestions]);
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (showToSuggestions) {
+        setToSuggestions(await fetchCitySuggestions(toCity));
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [toCity, showToSuggestions]);
 
   useEffect(() => {
     fetch('http://localhost:8080/api/rides/active', { cache: 'no-store' })
@@ -54,9 +111,18 @@ export default function Home() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSearching(true);
-    setTimeout(() => setIsSearching(false), 800);
+
+    const params = new URLSearchParams();
+    if (fromCity.trim()) params.append('fromCity', fromCity.trim());
+    if (toCity.trim()) params.append('toCity', toCity.trim());
+    if (date) params.append('date', date);
+    params.append('seats', String(passengers));
+
+    setTimeout(() => {
+      setIsSearching(false);
+      router.push(`/findAride?${params.toString()}`);
+    }, 400);
   };
-  const router = useRouter();
 
   const ridesToShow = useMemo(() => latestRides.slice(0, 3), [latestRides]);
 
@@ -78,19 +144,75 @@ export default function Home() {
               onSubmit={handleSearch}
               className="w-full max-w-4xl bg-white p-2 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-200/60 flex flex-col md:flex-row gap-2 relative z-10"
           >
-            <div className="flex-1 flex items-center px-4 py-3 md:border-r border-gray-100 group">
+            <div className="flex-1 flex items-center px-4 py-3 md:border-r border-gray-100 group relative">
               <Icon icon="solar:map-point-linear" className="text-gray-400 text-lg mr-3" />
               <div className="flex flex-col w-full text-left">
                 <label className="text-xs font-medium text-gray-400 mb-0.5 uppercase tracking-wide">Leaving from</label>
-                <input type="text" placeholder="City or address" className="w-full bg-transparent focus:outline-none text-gray-900 placeholder-gray-300 text-sm font-medium" required />
+                <input
+                    type="text"
+                    value={fromCity}
+                    onChange={(e) => {
+                      setFromCity(e.target.value);
+                      setShowFromSuggestions(true);
+                    }}
+                    onBlur={() => setTimeout(() => setShowFromSuggestions(false), 150)}
+                    placeholder="City or address"
+                    className="w-full bg-transparent focus:outline-none text-gray-900 placeholder-gray-300 text-sm font-medium"
+                    required
+                />
+                {showFromSuggestions && fromSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                      {fromSuggestions.map((s, i) => (
+                          <button
+                              key={`${s.name}-${i}`}
+                              type="button"
+                              onMouseDown={() => {
+                                setFromCity(s.name);
+                                setShowFromSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          >
+                            {s.name}{s.country ? `, ${s.country}` : ''}
+                          </button>
+                      ))}
+                    </div>
+                )}
               </div>
             </div>
 
-            <div className="flex-1 flex items-center px-4 py-3 md:border-r border-gray-100 group">
+            <div className="flex-1 flex items-center px-4 py-3 md:border-r border-gray-100 group relative">
               <Icon icon="solar:point-on-map-linear" className="text-gray-400 text-lg mr-3" />
               <div className="flex flex-col w-full text-left">
                 <label className="text-xs font-medium text-gray-400 mb-0.5 uppercase tracking-wide">Going to</label>
-                <input type="text" placeholder="City or address" className="w-full bg-transparent focus:outline-none text-gray-900 placeholder-gray-300 text-sm font-medium" required />
+                <input
+                    type="text"
+                    value={toCity}
+                    onChange={(e) => {
+                      setToCity(e.target.value);
+                      setShowToSuggestions(true);
+                    }}
+                    onBlur={() => setTimeout(() => setShowToSuggestions(false), 150)}
+                    placeholder="City or address"
+                    className="w-full bg-transparent focus:outline-none text-gray-900 placeholder-gray-300 text-sm font-medium"
+                    required
+                />
+                {showToSuggestions && toSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                      {toSuggestions.map((s, i) => (
+                          <button
+                              key={`${s.name}-${i}`}
+                              type="button"
+                              onMouseDown={() => {
+                                setToCity(s.name);
+                                setShowToSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          >
+                            {s.name}{s.country ? `, ${s.country}` : ''}
+                          </button>
+                      ))}
+                    </div>
+                )}
               </div>
             </div>
 
@@ -111,11 +233,15 @@ export default function Home() {
 
             <div className="flex items-center px-4 py-3 md:border-l border-gray-100 group w-auto md:w-32">
               <Icon icon="solar:user-linear" className="text-gray-400 text-lg mr-2" />
-              <select className="w-full bg-transparent focus:outline-none text-gray-900 text-sm font-medium cursor-pointer appearance-none">
-                <option>1 pass.</option>
-                <option>2 pass.</option>
-                <option>3 pass.</option>
-                <option>4 pass.</option>
+              <select
+                  value={passengers}
+                  onChange={(e) => setPassengers(Number(e.target.value))}
+                  className="w-full bg-transparent focus:outline-none text-gray-900 text-sm font-medium cursor-pointer appearance-none"
+              >
+                <option value={1}>1 pass.</option>
+                <option value={2}>2 pass.</option>
+                <option value={3}>3 pass.</option>
+                <option value={4}>4 pass.</option>
               </select>
             </div>
 
@@ -203,7 +329,6 @@ export default function Home() {
                         <div className="flex justify-between items-start mb-6">
                           <div className="flex flex-col gap-4 relative">
                             <div className="absolute left-[5px] top-2 bottom-2 w-px bg-gray-200 -z-0" />
-
                             <div className="flex items-start gap-4 bg-white relative z-10">
                               <div className="w-3 h-3 rounded-full border-[3px] border-gray-900 bg-white mt-1" />
                               <div className="flex flex-col">
@@ -211,7 +336,6 @@ export default function Home() {
                                 <span className="text-sm text-gray-600">{ride.fromCity}, {ride.fromCountry}</span>
                               </div>
                             </div>
-
                             <div className="flex items-start gap-4 bg-white relative z-10">
                               <div className="w-3 h-3 rounded-full border-[3px] border-brand-500 bg-white mt-1" />
                               <div className="flex flex-col">
@@ -238,7 +362,8 @@ export default function Home() {
 
                           <button
                               onClick={() => router.push(`/book?id=${ride.id}`)}
-                              className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-900 text-sm font-medium transition-colors border border-gray-200/50">
+                              className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-900 text-sm font-medium transition-colors border border-gray-200/50"
+                          >
                             Book
                           </button>
                         </div>

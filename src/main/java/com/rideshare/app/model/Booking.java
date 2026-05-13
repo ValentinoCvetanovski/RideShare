@@ -21,5 +21,9 @@ public class Booking {
 
     private Integer seatsBooked;
     private String paymentMethod; // IN_ADVANCE / IN_PERSON
+
+    @Column(nullable = false)
+    private String status = "ACTIVE";
+
 }
 

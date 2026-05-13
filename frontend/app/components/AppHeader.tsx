@@ -49,6 +49,10 @@ export default function AppHeader() {
                                 Publish a ride
                             </Link>
 
+                            <Link href="/myBookings" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                My Bookings
+                            </Link>
+
                             <Link href="/myAccount" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                                 My Account
                             </Link>
@@ -61,7 +65,6 @@ export default function AppHeader() {
                             </button>
                         </>
                     ) : (
-
                         <>
                             <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                                 Log in
