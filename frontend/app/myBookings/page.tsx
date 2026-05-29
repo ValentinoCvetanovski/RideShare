@@ -128,7 +128,7 @@ export default function MyBookingsPage() {
                                     <div className="flex-1">
                                         <div className="flex items-start gap-4">
                                             <img
-                                                src={b.ride.driverAvatar || `https://i.pravatar.cc/150?u=${b.ride.driverName}`}
+                                                src={b.ride.driverAvatar || `'/default-avatar.png'${b.ride.driverName}`}
                                                 alt="Driver"
                                                 className="w-12 h-12 rounded-full object-cover bg-gray-100"
                                             />

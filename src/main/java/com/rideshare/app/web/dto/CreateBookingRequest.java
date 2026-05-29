@@ -8,5 +8,7 @@ public class CreateBookingRequest {
     private Long passengerId;
     private Integer seatsBooked;
     private String paymentMethod;
+    private String pickupLocation;
+    private String passengerNote;
 }
 

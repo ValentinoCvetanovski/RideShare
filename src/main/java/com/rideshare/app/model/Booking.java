@@ -23,7 +23,12 @@ public class Booking {
     private String paymentMethod; // IN_ADVANCE / IN_PERSON
 
     @Column(nullable = false)
-    private String status = "ACTIVE";
+    private String status = "PENDING";
+
+    private String pickupLocation;
+
+    @Column(columnDefinition = "TEXT")
+    private String passengerNote;
 
 }
 

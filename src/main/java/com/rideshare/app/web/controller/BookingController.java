@@ -29,5 +29,13 @@ public class BookingController {
         bookingService.cancelBooking(bookingId);
     }
 
+    @PostMapping("/{bookingId}/confirm")
+    public Booking confirm(@PathVariable Long bookingId) {
+        return bookingService.confirmBooking(bookingId);
+    }
+    @PostMapping("/{bookingId}/deny")
+    public Booking deny(@PathVariable Long bookingId) {
+        return bookingService.denyBooking(bookingId);
+    }
 }
 
