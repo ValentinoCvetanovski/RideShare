@@ -27,4 +27,6 @@ public class Message {
     private boolean read = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+
+
 }

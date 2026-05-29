@@ -37,6 +37,15 @@ type Notification = {
     };
 };
 
+type ChatMessage = {
+    id: number;
+    content: string;
+    createdAt?: string;
+    read?: boolean;
+    sender: User;
+    receiver: User;
+};
+
 export default function AppHeader() {
     const router = useRouter();
 
@@ -50,6 +59,12 @@ export default function AppHeader() {
     const [messageUsers, setMessageUsers] = useState<User[]>([]);
     const [searchedUsers, setSearchedUsers] = useState<User[]>([]);
     const [userSearch, setUserSearch] = useState('');
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+    const [selectedChatUser, setSelectedChatUser] = useState<User | null>(null);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [messageText, setMessageText] = useState('');
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
 
     const [loadingActionId, setLoadingActionId] = useState<number | null>(null);
 
@@ -85,6 +100,38 @@ export default function AppHeader() {
         }
     };
 
+    const loadUnreadMessagesCount = async (userId: number) => {
+        try {
+            const res = await fetch(`http://localhost:8080/api/messages/unread-count/${userId}`, {
+                cache: 'no-store',
+            });
+
+            if (!res.ok) return;
+
+            const count = await res.json();
+            setUnreadMessagesCount(Number(count) || 0);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const markConversationAsRead = async (userId: number, otherUserId: number) => {
+        try {
+            const res = await fetch(
+                `http://localhost:8080/api/messages/conversation/read?userId=${userId}&otherUserId=${otherUserId}`,
+                {
+                    method: 'POST',
+                }
+            );
+
+            if (!res.ok) return;
+
+            loadUnreadMessagesCount(userId);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         const rawUser = localStorage.getItem('user');
 
@@ -101,10 +148,12 @@ export default function AppHeader() {
         if (parsedUser.id) {
             loadNotifications(parsedUser.id);
             loadMessageUsers(parsedUser.id);
+            loadUnreadMessagesCount(parsedUser.id);
 
             const interval = setInterval(() => {
                 loadNotifications(parsedUser.id!);
                 loadMessageUsers(parsedUser.id!);
+                loadUnreadMessagesCount(parsedUser.id!);
             }, 10000);
 
             return () => clearInterval(interval);
@@ -207,6 +256,7 @@ export default function AppHeader() {
 
         if (user?.id) {
             loadMessageUsers(user.id);
+            loadUnreadMessagesCount(user.id);
         }
     };
 
@@ -219,11 +269,63 @@ export default function AppHeader() {
         }
     };
 
-    const openConversation = (otherUserId?: number) => {
-        if (!otherUserId) return;
-        setIsMessagesOpen(false);
+    const openConversation = async (otherUser?: User) => {
+        if (!user?.id || !otherUser?.id) return;
+
+        setSelectedChatUser(otherUser);
         setUserSearch('');
-        router.push(`/messages?userId=${otherUserId}`);
+
+        try {
+            const res = await fetch(
+                `http://localhost:8080/api/messages/conversation?userId=${user.id}&otherUserId=${otherUser.id}`,
+                { cache: 'no-store' }
+            );
+
+            if (!res.ok) return;
+
+            const data = await res.json();
+            setChatMessages(data || []);
+
+            await markConversationAsRead(user.id, otherUser.id);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const sendMessage = async () => {
+        if (!user?.id || !selectedChatUser?.id) return;
+
+        const content = messageText.trim();
+        if (!content) return;
+
+        setIsSendingMessage(true);
+
+        try {
+            const res = await fetch('http://localhost:8080/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    senderId: user.id,
+                    receiverId: selectedChatUser.id,
+                    content,
+                }),
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Message failed');
+            }
+
+            const savedMessage = await res.json();
+            setChatMessages((prev) => [...prev, savedMessage]);
+            setMessageText('');
+            loadMessageUsers(user.id);
+            loadUnreadMessagesCount(user.id);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to send message');
+        } finally {
+            setIsSendingMessage(false);
+        }
     };
 
     const usersToShow = userSearch.trim() ? searchedUsers : messageUsers;
@@ -361,60 +463,164 @@ export default function AppHeader() {
                                     className="relative w-9 h-9 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                                 >
                                     <Icon icon="solar:chat-round-dots-linear" className="text-xl" />
+
+                                    {unreadMessagesCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-semibold flex items-center justify-center">
+                                            {unreadMessagesCount}
+                                        </span>
+                                    )}
                                 </button>
 
                                 {isMessagesOpen && (
-                                    <div className="absolute right-0 mt-3 w-[340px] max-h-[460px] overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-xl p-3 z-[1300]">
-                                        <div className="px-2 py-2">
-                                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Messages</h3>
-
-                                            <div className="relative">
-                                                <Icon
-                                                    icon="solar:magnifer-linear"
-                                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                                />
-                                                <input
-                                                    value={userSearch}
-                                                    onChange={(e) => setUserSearch(e.target.value)}
-                                                    placeholder="Search users..."
-                                                    className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-teal-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-2 space-y-1">
-                                            {usersToShow.length === 0 ? (
-                                                <div className="py-10 text-center">
-                                                    <Icon icon="solar:chat-round-line-linear" className="text-3xl text-gray-300 mx-auto mb-2" />
-                                                    <p className="text-sm text-gray-500">
-                                                        {userSearch.trim() ? 'No users found.' : 'No conversations yet.'}
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                usersToShow.map((messageUser) => (
+                                    <div className="absolute right-0 mt-3 w-[360px] max-h-[500px] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-xl p-3 z-[1300]">
+                                        {selectedChatUser ? (
+                                            <div className="flex flex-col h-[430px]">
+                                                <div className="flex items-center gap-3 px-2 py-2 border-b border-gray-100">
                                                     <button
-                                                        key={messageUser.id}
                                                         type="button"
-                                                        onClick={() => openConversation(messageUser.id)}
-                                                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                                                        onClick={() => {
+                                                            setSelectedChatUser(null);
+                                                            setChatMessages([]);
+                                                            if (user?.id) loadUnreadMessagesCount(user.id);
+                                                        }}
+                                                        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
                                                     >
+                                                        <Icon icon="solar:arrow-left-linear" />
+                                                    </button>
+
+                                                    {selectedChatUser.avatar ? (
                                                         <img
-                                                            src={messageUser.avatar || '/default-avatar.png'}
-                                                            alt={messageUser.fullName || 'User'}
-                                                            className="w-10 h-10 rounded-full object-cover bg-gray-100"
+                                                            src={selectedChatUser.avatar}
+                                                            alt={selectedChatUser.fullName || 'User'}
+                                                            className="w-9 h-9 rounded-full object-cover bg-gray-100"
                                                         />
-                                                        <div className="min-w-0">
-                                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                                                {messageUser.fullName || 'Unknown user'}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500 truncate">
-                                                                {messageUser.email}
+                                                    ) : (
+                                                        <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center text-sm font-semibold">
+                                                            {(selectedChatUser.fullName || selectedChatUser.email || 'U').charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">
+                                                            {selectedChatUser.fullName || 'Unknown user'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 truncate">{selectedChatUser.email}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-1 overflow-y-auto px-2 py-3 space-y-2">
+                                                    {chatMessages.length === 0 ? (
+                                                        <p className="text-sm text-gray-400 text-center mt-16">
+                                                            No messages yet.
+                                                        </p>
+                                                    ) : (
+                                                        chatMessages.map((msg) => {
+                                                            const isMine = msg.sender?.id === user?.id;
+
+                                                            return (
+                                                                <div
+                                                                    key={msg.id}
+                                                                    className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                                                                >
+                                                                    <div
+                                                                        className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
+                                                                            isMine
+                                                                                ? 'bg-teal-600 text-white rounded-br-md'
+                                                                                : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                                                                        }`}
+                                                                    >
+                                                                        {msg.content}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+
+                                                <div className="border-t border-gray-100 pt-3 px-2 flex gap-2">
+                                                    <input
+                                                        value={messageText}
+                                                        onChange={(e) => setMessageText(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                sendMessage();
+                                                            }
+                                                        }}
+                                                        placeholder="Write a message..."
+                                                        className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={sendMessage}
+                                                        disabled={isSendingMessage}
+                                                        className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium disabled:opacity-60"
+                                                    >
+                                                        Send
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="px-2 py-2">
+                                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Messages</h3>
+
+                                                    <div className="relative">
+                                                        <Icon
+                                                            icon="solar:magnifer-linear"
+                                                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                                        />
+                                                        <input
+                                                            value={userSearch}
+                                                            onChange={(e) => setUserSearch(e.target.value)}
+                                                            placeholder="Search users..."
+                                                            className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-2 space-y-1 max-h-[380px] overflow-y-auto">
+                                                    {usersToShow.length === 0 ? (
+                                                        <div className="py-10 text-center">
+                                                            <Icon icon="solar:chat-round-line-linear" className="text-3xl text-gray-300 mx-auto mb-2" />
+                                                            <p className="text-sm text-gray-500">
+                                                                {userSearch.trim() ? 'No users found.' : 'No conversations yet.'}
                                                             </p>
                                                         </div>
-                                                    </button>
-                                                ))
-                                            )}
-                                        </div>
+                                                    ) : (
+                                                        usersToShow.map((messageUser) => (
+                                                            <button
+                                                                key={messageUser.id}
+                                                                type="button"
+                                                                onClick={() => openConversation(messageUser)}
+                                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                                                            >
+                                                                {messageUser.avatar ? (
+                                                                    <img
+                                                                        src={messageUser.avatar}
+                                                                        alt={messageUser.fullName || 'User'}
+                                                                        className="w-10 h-10 rounded-full object-cover bg-gray-100"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center text-sm font-semibold">
+                                                                        {(messageUser.fullName || messageUser.email || 'U').charAt(0).toUpperCase()}
+                                                                    </div>
+                                                                )}
+
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                                        {messageUser.fullName || 'Unknown user'}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500 truncate">
+                                                                        {messageUser.email}
+                                                                    </p>
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>

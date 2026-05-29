@@ -32,6 +32,10 @@ public class MessageController {
         }
         return new ArrayList<>(users.values());
     }
+    @GetMapping("/unread-count/{userId}")
+    public long getUnreadMessagesCount(@PathVariable Long userId) {
+        return messageRepository.countByReceiverIdAndReadFalse(userId);
+    }
     @GetMapping("/search")
     public List<User> searchUsers(
             @RequestParam Long userId,
@@ -57,6 +61,19 @@ public class MessageController {
                 otherUserId,
                 userId
         );
+    }
+    @PostMapping("/conversation/read")
+    public void markConversationAsRead(
+            @RequestParam Long userId,
+            @RequestParam Long otherUserId
+    ) {
+        List<Message> unreadMessages = messageRepository.findByReceiverIdAndSenderIdAndReadFalse(userId, otherUserId);
+
+        for (Message message : unreadMessages) {
+            message.setRead(true);
+        }
+
+        messageRepository.saveAll(unreadMessages);
     }
     @PostMapping
     public Message sendMessage(@RequestBody SendMessageRequest req) {
