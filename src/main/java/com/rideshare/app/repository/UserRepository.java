@@ -10,4 +10,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
     List<User> findTop8ByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String fullName, String email);
+
+    long countByLastLoginAtAfter(java.time.LocalDateTime date);
+
+    List<User> findByEmailIn(java.util.List<String> emails);
 }

@@ -32,6 +32,7 @@ public class AuthService {
         if (user.getRole() == null || user.getRole().isBlank()) {
             user.setRole("USER");
         }
+        user.setLastLoginAt(java.time.LocalDateTime.now());
 
         return userRepository.save(user);
     }
@@ -42,7 +43,8 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
-
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
         return user;
     }
 

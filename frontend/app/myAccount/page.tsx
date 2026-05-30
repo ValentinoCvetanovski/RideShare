@@ -7,10 +7,12 @@ import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
 
 type User = {
+    id?: number;
     fullName?: string;
     email?: string;
     phone?: string;
     avatar?: string;
+    role?: string;
 };
 
 type Profile = {
@@ -138,9 +140,14 @@ export default function MyAccountPage() {
         }
     };
 
-    const onSave = (e: React.FormEvent) => {
+    const onSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
+
+        if (!user.id) {
+            alert('User id is missing. Please log in again.');
+            return;
+        }
 
         setIsSaving(true);
 
@@ -159,16 +166,40 @@ export default function MyAccountPage() {
 
         try {
             localStorage.setItem('myAccountProfile', JSON.stringify(safeProfileToSave));
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-            setUser(updatedUser);
+
+            const res = await fetch(`http://localhost:8080/api/users/${user.id}/avatar`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    avatar: updatedUser.avatar,
+                }),
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Failed to save avatar');
+            }
+
+            const savedUser = await res.json();
+
+            const userToStore: User = {
+                ...updatedUser,
+                ...savedUser,
+                avatar: savedUser.avatar || updatedUser.avatar,
+            };
+
+            localStorage.setItem('user', JSON.stringify(userToStore));
+            window.dispatchEvent(new Event('userUpdated'));
+
+            setUser(userToStore);
 
             setTimeout(() => {
                 setIsSaving(false);
                 alert('Profile updated successfully!');
             }, 350);
-        } catch {
+        } catch (err) {
             setIsSaving(false);
-            alert('Could not save profile. Try smaller image.');
+            alert(err instanceof Error ? err.message : 'Could not save profile. Try smaller image.');
         }
     };
 

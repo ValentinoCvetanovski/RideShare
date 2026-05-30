@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { motion, useInView, useAnimation } from 'framer-motion';
 import AppHeader from '../components/AppHeader';
+import AppFooter from "@/app/components/AppFooter";
 
 // --- Компонента за Бројач (Statistics) ---
 const Counter = ({ target }: { target: number }) => {
@@ -49,6 +50,27 @@ const Reveal = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function AboutUs() {
+    const [stats, setStats] = useState({
+        sharedRides: 0,
+        activeUsers: 0,
+        connectedCities: 2,
+    });
+
+    const [team, setTeam] = useState<
+        { id: number; fullName: string; email: string; avatar?: string; role?: string }[]
+    >([]);
+
+    useEffect(() => {
+        fetch('http://localhost:8080/api/about/stats', { cache: 'no-store' })
+            .then((res) => res.json())
+            .then((data) => setStats(data))
+            .catch(console.error);
+
+        fetch('http://localhost:8080/api/about/team', { cache: 'no-store' })
+            .then((res) => res.json())
+            .then((data) => setTeam(data || []))
+            .catch(console.error);
+    }, []);
     return (
         <div className="bg-gray-50 text-gray-900 font-sans antialiased selection:bg-teal-500 selection:text-white min-h-screen">
 
@@ -126,19 +148,19 @@ export default function AboutUs() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center divide-y md:divide-y-0 md:divide-x divide-gray-800">
                             <div className="pt-8 md:pt-0">
                                 <div className="text-4xl font-semibold tracking-tighter mb-2 text-teal-500">
-                                    <Counter target={10000} />+
+                                    <Counter target={stats.sharedRides} />+
                                 </div>
                                 <p className="text-sm text-gray-400 font-medium uppercase tracking-widest">Shared Rides</p>
                             </div>
                             <div className="pt-8 md:pt-0">
                                 <div className="text-4xl font-semibold tracking-tighter mb-2 text-teal-500">
-                                    <Counter target={5000} />+
+                                    <Counter target={stats.activeUsers} />+
                                 </div>
                                 <p className="text-sm text-gray-400 font-medium uppercase tracking-widest">Active Users</p>
                             </div>
                             <div className="pt-8 md:pt-0">
                                 <div className="text-4xl font-semibold tracking-tighter mb-2 text-teal-500">
-                                    <Counter target={120} />+
+                                    <Counter target={stats.connectedCities} />+
                                 </div>
                                 <p className="text-sm text-gray-400 font-medium uppercase tracking-widest">Connected Cities</p>
                             </div>
@@ -154,23 +176,28 @@ export default function AboutUs() {
                                 <h2 className="text-2xl font-medium tracking-tight text-gray-900 mb-3">Meet the Team</h2>
                                 <p className="text-sm text-gray-500 max-w-xl mx-auto">The people working behind the scenes.</p>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                                {[
-                                    { name: 'Elena Rostova', role: 'Founder & CEO', id: '1' },
-                                    { name: 'Marcus Chen', role: 'Head of Engineering', id: '2' },
-                                    { name: 'Sarah Jenkins', role: 'Product Designer', id: '3' },
-                                    { name: 'David Miller', role: 'Operations Manager', id: '4' }
-                                ].map((member) => (
+                            <div className="grid grid-cols-2 md:grid-cols-2 gap-8">
+                                {team.map((member) => (
                                     <div key={member.id} className="flex flex-col items-center group text-center">
                                         <div className="w-24 h-24 rounded-full bg-gray-200 mb-4 overflow-hidden shadow-sm">
-                                            <img
-                                                src={`https://i.pravatar.cc/150?u=${member.id}`}
-                                                alt={member.name}
-                                                className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
-                                            />
+                                            {member.avatar ? (
+                                                <img
+                                                    src={member.avatar}
+                                                    alt={member.fullName}
+                                                    className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-teal-50 text-teal-700 flex items-center justify-center text-2xl font-semibold">
+                                                    {(member.fullName || member.email || 'U').charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
                                         </div>
-                                        <h4 className="text-sm font-medium text-gray-900">{member.name}</h4>
-                                        <p className="text-xs text-gray-500 mt-1">{member.role}</p>
+
+                                        <h4 className="text-sm font-medium text-gray-900">{member.fullName}</h4>
+
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {member.role === 'ADMIN' ? 'Creator & Owner' : 'Test Subject'}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -178,76 +205,7 @@ export default function AboutUs() {
                     </Reveal>
                 </section>
             </main>
-
-            {/* --- Full Footer --- */}
-            <footer className="bg-white border-t border-gray-200 pt-16 pb-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-                        {/* Column 1: Top Routes */}
-                        <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-tight">Top routes</h4>
-                            <ul className="space-y-3">
-                                <li><Link href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">San Francisco → LA</Link></li>
-                                <li><Link href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">New York → Boston</Link></li>
-                                <li><Link href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Austin → Houston</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 2: About */}
-                        <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-tight">About</h4>
-                            <ul className="space-y-3">
-                                <li><Link href="/howItWorks" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">How it works</Link></li>
-                                <li><Link href="/about" className="text-sm text-teal-600 font-medium transition-colors">About us</Link></li>
-                                <li><Link href="/careers" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Careers</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 3: Help */}
-                        <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-tight">Help</h4>
-                            <ul className="space-y-3">
-                                <li><Link href="/helpCenter" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Help Center</Link></li>
-                                <li><Link href="/trustAndSafety" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Trust & Safety</Link></li>
-                                <li><Link href="/contactUs" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Contact us</Link></li>
-                            </ul>
-                        </div>
-
-                        {/* Column 4: Legal */}
-                        <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-4 tracking-tight">Legal</h4>
-                            <ul className="space-y-3">
-                                <li><Link href="/termsOfService" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
-                                <li><Link href="/privacyPolicy" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
-                                <li><Link href="/cookiePolicy" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Cookie Policy</Link></li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    {/* Bottom Bar: Logo, Socials, Copyright */}
-                    <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="text-xl font-medium tracking-tighter text-gray-900 flex items-center gap-2 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-                            <Icon icon="solar:routing-2-linear" strokeWidth={1.5} />
-                            RideShare
-                        </div>
-
-                        {/* Social Icons */}
-                        <div className="flex items-center gap-4">
-                            <Link href="#" className="text-gray-400 hover:text-gray-900 transition-colors">
-                                <Icon icon="solar:facebook-linear" className="text-xl" />
-                            </Link>
-                            <Link href="#" className="text-gray-400 hover:text-gray-900 transition-colors">
-                                <Icon icon="solar:twitter-linear" className="text-xl" />
-                            </Link>
-                            <Link href="#" className="text-gray-400 hover:text-gray-900 transition-colors">
-                                <Icon icon="solar:instagram-linear" className="text-xl" />
-                            </Link>
-                        </div>
-
-                        <p className="text-xs text-gray-400">© 2026 RideShare Inc. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <AppFooter/>
         </div>
     );
 }

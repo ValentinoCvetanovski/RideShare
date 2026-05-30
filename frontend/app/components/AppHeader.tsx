@@ -133,31 +133,56 @@ export default function AppHeader() {
     };
 
     useEffect(() => {
-        const rawUser = localStorage.getItem('user');
+        let interval: ReturnType<typeof setInterval> | null = null;
 
-        if (!rawUser) {
-            setIsLoggedIn(false);
-            setUser(null);
-            return;
-        }
+        const loadUserFromStorage = () => {
+            const rawUser = localStorage.getItem('user');
 
-        const parsedUser: User = JSON.parse(rawUser);
-        setUser(parsedUser);
-        setIsLoggedIn(true);
+            if (!rawUser) {
+                setIsLoggedIn(false);
+                setUser(null);
+                setNotifications([]);
+                setMessageUsers([]);
+                setUnreadMessagesCount(0);
 
-        if (parsedUser.id) {
-            loadNotifications(parsedUser.id);
-            loadMessageUsers(parsedUser.id);
-            loadUnreadMessagesCount(parsedUser.id);
+                if (interval) {
+                    clearInterval(interval);
+                    interval = null;
+                }
 
-            const interval = setInterval(() => {
-                loadNotifications(parsedUser.id!);
-                loadMessageUsers(parsedUser.id!);
-                loadUnreadMessagesCount(parsedUser.id!);
-            }, 10000);
+                return;
+            }
 
-            return () => clearInterval(interval);
-        }
+            const parsedUser: User = JSON.parse(rawUser);
+            setUser(parsedUser);
+            setIsLoggedIn(true);
+
+            if (parsedUser.id) {
+                loadNotifications(parsedUser.id);
+                loadMessageUsers(parsedUser.id);
+                loadUnreadMessagesCount(parsedUser.id);
+
+                if (!interval) {
+                    interval = setInterval(() => {
+                        loadNotifications(parsedUser.id!);
+                        loadMessageUsers(parsedUser.id!);
+                        loadUnreadMessagesCount(parsedUser.id!);
+                    }, 10000);
+                }
+            }
+        };
+
+        loadUserFromStorage();
+
+        window.addEventListener('userUpdated', loadUserFromStorage);
+
+        return () => {
+            window.removeEventListener('userUpdated', loadUserFromStorage);
+
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
     }, []);
 
     useEffect(() => {

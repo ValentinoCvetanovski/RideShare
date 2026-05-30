@@ -49,10 +49,12 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             return userRepository.save(newUser);
         });
 
-        if (avatar != null && !avatar.isBlank()) {
+        if ((user.getAvatar() == null || user.getAvatar().isBlank()) && avatar != null && !avatar.isBlank()) {
             user.setAvatar(avatar);
             userRepository.save(user);
         }
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
 
         String redirectUrl = "http://localhost:3000/oauth-success"
                 + "?id=" + user.getId()

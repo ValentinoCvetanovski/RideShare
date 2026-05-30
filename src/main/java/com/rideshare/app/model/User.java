@@ -28,4 +28,6 @@ public class User {
     @Column(nullable = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
+    private java.time.LocalDateTime lastLoginAt;
 }
