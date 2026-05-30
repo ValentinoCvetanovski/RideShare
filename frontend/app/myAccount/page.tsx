@@ -13,10 +13,11 @@ type User = {
     phone?: string;
     avatar?: string;
     role?: string;
+    emailVerified?: boolean;
 };
 
 type Profile = {
-    profilePicture: string; // preview + will be saved to user.avatar
+    profilePicture: string;
     carModel: string;
     city: string;
     birthDate: string;
@@ -73,6 +74,10 @@ export default function MyAccountPage() {
     const [phoneInput, setPhoneInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
+    const [emailCode, setEmailCode] = useState('');
+    const [isSendingEmailCode, setIsSendingEmailCode] = useState(false);
+    const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+
     useEffect(() => {
         const userRaw = localStorage.getItem('user');
         if (!userRaw) {
@@ -100,13 +105,10 @@ export default function MyAccountPage() {
             }
         }
 
-        // Show existing avatar from user as current preview
         if (parsedUser.avatar) {
             setProfile((prev) => ({ ...prev, profilePicture: parsedUser.avatar || '' }));
         }
     }, [router]);
-
-    const isPhoneVerified = Boolean(user?.phone && user.phone.trim().length > 0);
 
     const completionPercent = useMemo(() => {
         const checks = [
@@ -116,10 +118,11 @@ export default function MyAccountPage() {
             Boolean(profile.birthDate),
             Boolean(profile.bio.trim()),
             Boolean((user?.phone || phoneInput).trim()),
+            Boolean(user?.emailVerified),
         ];
         const completed = checks.filter(Boolean).length;
         return Math.round((completed / checks.length) * 100);
-    }, [profile, user?.phone, phoneInput]);
+    }, [profile, user?.phone, user?.emailVerified, phoneInput]);
 
     const completionLabel =
         completionPercent === 100 ? 'Complete' : completionPercent >= 60 ? 'Good' : 'Needs details';
@@ -137,6 +140,73 @@ export default function MyAccountPage() {
             onFieldChange('profilePicture', smallBase64);
         } catch {
             alert('Image processing failed');
+        }
+    };
+
+    const sendEmailVerificationCode = async () => {
+        if (!user?.id) {
+            alert('Please log in again.');
+            return;
+        }
+
+        setIsSendingEmailCode(true);
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/users/${user.id}/email/send-code`, {
+                method: 'POST',
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Failed to send verification code');
+            }
+
+            alert('Verification code sent to your email.');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to send verification code');
+        } finally {
+            setIsSendingEmailCode(false);
+        }
+    };
+
+    const verifyEmailCode = async () => {
+        if (!user?.id) {
+            alert('Please log in again.');
+            return;
+        }
+
+        if (!emailCode.trim()) {
+            alert('Enter the verification code.');
+            return;
+        }
+
+        setIsVerifyingEmail(true);
+
+        try {
+            const res = await fetch(`http://localhost:8080/api/users/${user.id}/email/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: emailCode.trim() }),
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Wrong verification code');
+            }
+
+            const savedUser = await res.json();
+
+            localStorage.setItem('user', JSON.stringify(savedUser));
+            window.dispatchEvent(new Event('userUpdated'));
+
+            setUser(savedUser);
+            setEmailCode('');
+
+            alert('Email verified successfully!');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Wrong verification code');
+        } finally {
+            setIsVerifyingEmail(false);
         }
     };
 
@@ -212,7 +282,6 @@ export default function MyAccountPage() {
                 <p className="text-sm text-gray-500 mb-8">Manage your profile details and preferences.</p>
 
                 <form onSubmit={onSave} className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6">
-                    {/* Unchangeable signup data */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
@@ -255,21 +324,53 @@ export default function MyAccountPage() {
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Verified</label>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Email Verification</label>
+
                             <div
                                 className={`w-full border rounded-xl px-4 py-2.5 text-sm font-medium flex items-center gap-2 ${
-                                    isPhoneVerified
+                                    user?.emailVerified
                                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                         : 'bg-amber-50 border-amber-200 text-amber-700'
                                 }`}
                             >
-                                <Icon icon={isPhoneVerified ? 'solar:shield-check-linear' : 'solar:shield-warning-linear'} />
-                                {isPhoneVerified ? 'Phone verified' : 'Not verified (add phone)'}
+                                <Icon icon={user?.emailVerified ? 'solar:shield-check-linear' : 'solar:shield-warning-linear'} />
+                                {user?.emailVerified ? 'Email verified' : 'Email not verified'}
                             </div>
+
+                            {!user?.emailVerified && (
+                                <div className="mt-3 space-y-2">
+                                    <button
+                                        type="button"
+                                        onClick={sendEmailVerificationCode}
+                                        disabled={isSendingEmailCode}
+                                        className="px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium disabled:opacity-60"
+                                    >
+                                        {isSendingEmailCode ? 'Sending...' : 'Send code to email'}
+                                    </button>
+
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={emailCode}
+                                            onChange={(e) => setEmailCode(e.target.value)}
+                                            placeholder="Enter 5-digit code"
+                                            maxLength={5}
+                                            className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={verifyEmailCode}
+                                            disabled={isVerifyingEmail}
+                                            className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-60"
+                                        >
+                                            {isVerifyingEmail ? 'Verifying...' : 'Verify'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Profile image */}
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-2">Profile Picture</label>
                         <div className="flex items-center gap-4">
@@ -288,7 +389,6 @@ export default function MyAccountPage() {
                         </div>
                     </div>
 
-                    {/* Editable fields */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">Car Model</label>

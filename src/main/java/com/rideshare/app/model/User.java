@@ -30,4 +30,10 @@ public class User {
     private String password;
 
     private java.time.LocalDateTime lastLoginAt;
+
+    private Boolean emailVerified = false;
+
+    private String emailVerificationCode;
+
+    private java.time.LocalDateTime emailVerificationExpiresAt;
 }
