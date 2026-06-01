@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Icon } from '@iconify/react';
+
 import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
-
+import toast from 'react-hot-toast';
 type Ride = {
     id: number;
     fromCity: string;
@@ -51,13 +51,13 @@ export default function BookPage() {
 
         const userRaw = localStorage.getItem('user');
         if (!userRaw) {
-            alert('Please log in first.');
+            toast('Please log in first.');
             return;
         }
         const user = JSON.parse(userRaw);
 
         if (bookSeats < 1 || bookSeats > ride.seats) {
-            alert('Invalid seats count.');
+            toast.error('Invalid seats count.');
             return;
         }
 
@@ -79,9 +79,9 @@ export default function BookPage() {
                 throw new Error(msg || 'Booking failed');
             }
 
-            alert('Ride booked successfully!');
+            toast.success('Ride booked successfully!');
         } catch (e) {
-            alert(e instanceof Error ? e.message : 'Booking failed');
+            toast.error(e instanceof Error ? e.message : 'Booking failed');
         } finally {
             setIsSubmitting(false);
         }

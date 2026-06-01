@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import AppHeader from '../components/AppHeader';
 import AppFooter from '../components/AppFooter';
 import { useRouter } from 'next/navigation';
-
+import { toast } from 'react-hot-toast';
 
 type Ride = {
     id: number;
@@ -74,7 +74,7 @@ export default function FindARide() {
 
             setRides((prev) => prev.filter((r) => r.id !== rideId));
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to delete ride');
+            toast.error(err instanceof Error ? err.message : 'Failed to delete ride');
         }
     };
 

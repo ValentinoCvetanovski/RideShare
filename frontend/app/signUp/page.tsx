@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
-
+import { toast } from 'react-hot-toast';
 export default function SignUp() {
     // Form State
     const router = useRouter();
@@ -65,11 +65,11 @@ export default function SignUp() {
                 throw new Error(msg || "Signup failed");
             }
 
-            alert("Account created successfully!");
+            toast.success("Account created successfully!");
             router.push("/login");
         } catch (err) {
             console.error(err);
-            alert(err instanceof Error ? err.message : "Signup failed");
+            toast.error(err instanceof Error ? err.message : "Signup failed");
         } finally {
             setIsLoading(false);
         }

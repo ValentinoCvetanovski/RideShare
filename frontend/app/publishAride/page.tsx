@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import { useRouter } from 'next/navigation';
 import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
-
+import { toast } from 'react-hot-toast';
 const MapContainer = dynamic<React.ComponentProps<typeof MapContainerType>>(
     () => import('react-leaflet').then((mod) => mod.MapContainer),
     { ssr: false }
@@ -247,7 +247,7 @@ export default function PublishRide() {
         }
 
         if (!fromCoords || !toCoords) {
-            alert('Select both start and destination (city search or map click).');
+            toast('Select both start and destination (city search or map click).');
             return;
         }
 
@@ -259,7 +259,7 @@ export default function PublishRide() {
             Math.abs(routePath[routePath.length - 1][1] - toCoords[1]) < 0.05;
 
         if (!routeAvailable || !isFreshRoute) {
-            alert('No drivable land route found between selected points.');
+            toast.error('No drivable land route found between selected points.');
             return;
         }
 
@@ -316,7 +316,7 @@ export default function PublishRide() {
                 router.push(`/findAride?refresh=${Date.now()}`);
             }, 500);
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to publish ride');
+            toast.error(err instanceof Error ? err.message : 'Failed to publish ride');
         } finally {
             setIsLoading(false);
         }

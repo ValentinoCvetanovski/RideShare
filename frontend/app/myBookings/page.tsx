@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
-
+import { toast } from 'react-hot-toast';
 type BookingStatus = 'ACTIVE' | 'CANCELLED';
 
 type Booking = {
@@ -78,7 +78,7 @@ export default function MyBookingsPage() {
                 prev.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELLED' } : b))
             );
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to cancel booking');
+            toast.error(err instanceof Error ? err.message : 'Failed to cancel booking');
         } finally {
             setIsCancellingId(null);
         }

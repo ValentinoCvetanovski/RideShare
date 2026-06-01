@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import { useRouter } from 'next/navigation';
 import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
+import toast from 'react-hot-toast';
 
 type User = {
     id?: number;
@@ -139,13 +140,13 @@ export default function MyAccountPage() {
             const smallBase64 = await resizeImage(file, 160, 0.7);
             onFieldChange('profilePicture', smallBase64);
         } catch {
-            alert('Image processing failed');
+            toast.error('Image processing failed');
         }
     };
 
     const sendEmailVerificationCode = async () => {
         if (!user?.id) {
-            alert('Please log in again.');
+            toast('Please log in again.');
             return;
         }
 
@@ -161,9 +162,9 @@ export default function MyAccountPage() {
                 throw new Error(msg || 'Failed to send verification code');
             }
 
-            alert('Verification code sent to your email.');
+            toast('Verification code sent to your email.');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to send verification code');
+            toast.error(err instanceof Error ? err.message : 'Failed to send verification code');
         } finally {
             setIsSendingEmailCode(false);
         }
@@ -171,12 +172,12 @@ export default function MyAccountPage() {
 
     const verifyEmailCode = async () => {
         if (!user?.id) {
-            alert('Please log in again.');
+            toast('Please log in again.');
             return;
         }
 
         if (!emailCode.trim()) {
-            alert('Enter the verification code.');
+            toast('Enter the verification code.');
             return;
         }
 
@@ -202,9 +203,9 @@ export default function MyAccountPage() {
             setUser(savedUser);
             setEmailCode('');
 
-            alert('Email verified successfully!');
+            toast.success('Email verified successfully!');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Wrong verification code');
+            toast.error(err instanceof Error ? err.message : 'Wrong verification code');
         } finally {
             setIsVerifyingEmail(false);
         }
@@ -215,7 +216,7 @@ export default function MyAccountPage() {
         if (!user) return;
 
         if (!user.id) {
-            alert('User id is missing. Please log in again.');
+            toast('User id is missing. Please log in again.');
             return;
         }
 
@@ -265,11 +266,11 @@ export default function MyAccountPage() {
 
             setTimeout(() => {
                 setIsSaving(false);
-                alert('Profile updated successfully!');
+                toast.success('Profile updated successfully!');
             }, 350);
         } catch (err) {
             setIsSaving(false);
-            alert(err instanceof Error ? err.message : 'Could not save profile. Try smaller image.');
+            toast.error(err instanceof Error ? err.message : 'Could not save profile. Try smaller image.');
         }
     };
 

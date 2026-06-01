@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
+import { toast } from 'react-hot-toast';
 type User = {
     id?: number;
     fullName?: string;
@@ -269,7 +269,7 @@ export default function AppHeader() {
                 )
             );
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to update booking');
+            toast.error(err instanceof Error ? err.message : 'Failed to update booking');
         } finally {
             setLoadingActionId(null);
         }
@@ -347,7 +347,7 @@ export default function AppHeader() {
             loadMessageUsers(user.id);
             loadUnreadMessagesCount(user.id);
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to send message');
+            toast.error(err instanceof Error ? err.message : 'Failed to send message');
         } finally {
             setIsSendingMessage(false);
         }
