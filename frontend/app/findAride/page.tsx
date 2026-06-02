@@ -8,6 +8,7 @@ import AppHeader from '../components/AppHeader';
 import AppFooter from '../components/AppFooter';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 type Ride = {
     id: number;
@@ -59,8 +60,17 @@ export default function FindARide() {
     const isAdmin = currentUser?.role === 'ADMIN';
 
     const handleDeleteRide = async (rideId: number) => {
-        const confirmed = confirm('Are you sure you want to delete this ride?');
-        if (!confirmed) return;
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#9ca3af',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (!result.isConfirmed) return;
 
         try {
             const res = await fetch(`http://localhost:8080/api/rides/${rideId}`, {
@@ -73,6 +83,7 @@ export default function FindARide() {
             }
 
             setRides((prev) => prev.filter((r) => r.id !== rideId));
+            toast.success('Ride deleted successfully!');
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to delete ride');
         }
@@ -446,4 +457,5 @@ export default function FindARide() {
                 <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity" />
             )}
         </div>
-    );}
+    );
+}

@@ -5,6 +5,8 @@ import { Icon } from '@iconify/react';
 import AppHeader from '@/app/components/AppHeader';
 import AppFooter from '@/app/components/AppFooter';
 import { toast } from 'react-hot-toast';
+import Swal from 'sweetalert2';
+
 type BookingStatus = 'ACTIVE' | 'CANCELLED';
 
 type Booking = {
@@ -59,8 +61,17 @@ export default function MyBookingsPage() {
     }, []);
 
     const handleCancel = async (bookingId: number) => {
-        const confirmed = confirm('Cancel this booking?');
-        if (!confirmed) return;
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: 'Cancel this booking?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#9ca3af',
+            confirmButtonText: 'Yes, cancel it!'
+        });
+
+        if (!result.isConfirmed) return;
 
         setIsCancellingId(bookingId);
         try {
@@ -73,10 +84,11 @@ export default function MyBookingsPage() {
                 throw new Error(msg || 'Cancel failed');
             }
 
-            // Logical cancel -> update status in UI, ne brishi red
             setBookings((prev) =>
                 prev.map((b) => (b.id === bookingId ? { ...b, status: 'CANCELLED' } : b))
             );
+
+            toast.success('Booking cancelled successfully!');
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to cancel booking');
         } finally {
@@ -128,7 +140,7 @@ export default function MyBookingsPage() {
                                     <div className="flex-1">
                                         <div className="flex items-start gap-4">
                                             <img
-                                                src={b.ride.driverAvatar || `'/default-avatar.png'${b.ride.driverName}`}
+                                                src={b.ride.driverAvatar || '/default-avatar.png'}
                                                 alt="Driver"
                                                 className="w-12 h-12 rounded-full object-cover bg-gray-100"
                                             />
